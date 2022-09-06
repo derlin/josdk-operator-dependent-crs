@@ -1,6 +1,5 @@
 package ch.derlin.configreconciler.crds.config;
 
-import ch.derlin.configreconciler.crds.KubeReference;
 import javax.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -15,9 +14,6 @@ public class ConfigSpec {
 
   @NotNull
   String rootDbName = "postgres";
-
-  @NotNull
-  KubeReference credentialsSecretRef;
 
   String dbPrefix = null;
 }

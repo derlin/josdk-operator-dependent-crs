@@ -8,23 +8,28 @@ import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.Matcher.Result;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
+import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 import io.javaoperatorsdk.operator.processing.event.ResourceID;
 import io.javaoperatorsdk.operator.processing.event.source.SecondaryToPrimaryMapper;
+import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import javax.enterprise.context.ApplicationScoped;
 import javax.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 
 import static ch.derlin.configreconciler.Base64Util.decodeBase64;
 import static ch.derlin.configreconciler.Base64Util.encodeMap;
+import static ch.derlin.configreconciler.DbSecret.DB_SECRET_LABEL;
 
 
 @Slf4j
+@KubernetesDependent(labelSelector = DB_SECRET_LABEL)
 public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implements SecondaryToPrimaryMapper<Secret> {
 
+  public static final String DB_SECRET_LABEL = "app.kubernetes.io/managed-by=external-dbs-operator";
   public static final String DB_NAME = "DB_NAME";
   public static final String DB_HOST = "DB_HOST";
   public static final String DB_USER = "DB_USER";
@@ -33,6 +38,12 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
 
   public DbSecret() {
     super(Secret.class);
+  }
+
+  @Override
+  public void configureWith(KubernetesDependentResourceConfig config) {
+
+    super.configureWith(config);
   }
 
   @Override
@@ -80,23 +91,20 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
   }
 
   private Secret createSecret(Db db, DbInfo dbInfo) {
+    var label = DB_SECRET_LABEL.split("=");
     return new SecretBuilder()
         .withMetadata(new ObjectMetaBuilder()
             .withName(db.getMetadata().getName() + SECRET_SUFFIX)
             .withNamespace(db.getMetadata().getNamespace())
+            .withLabels(Map.of(label[0], label[1]))
             .build())
         .withData(secretDataFromDbInfo(dbInfo))
         .build();
   }
 
   @Override
-  public Set<ResourceID> toPrimaryResourceIDs(Secret dependentResource) {
-    var name = dependentResource.getMetadata().getName();
-    if (name.contains(SECRET_SUFFIX)) {
-      return Set.of(new ResourceID(name.substring(0, name.length() - SECRET_SUFFIX.length()),
-          dependentResource.getMetadata().getNamespace()));
-    }
-    return Set.of();
+  public void configureWith(InformerEventSource<Secret, Db> informerEventSource) {
+    super.configureWith(informerEventSource);
   }
 
   public static DbInfo dbInfoFromSecretData(Map<String, String> data) {
@@ -115,5 +123,15 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
         DB_USER, dbInfo.getDbName(),
         DB_PASSWORD, dbInfo.getPassword()
     ));
+  }
+
+  @Override
+  public Set<ResourceID> toPrimaryResourceIDs(Secret dependentResource) {
+    var name = dependentResource.getMetadata().getName();
+    if (name.contains(SECRET_SUFFIX)) {
+      return Set.of(new ResourceID(name.substring(0, name.length() - SECRET_SUFFIX.length()),
+          dependentResource.getMetadata().getNamespace()));
+    }
+    return Set.of();
   }
 }

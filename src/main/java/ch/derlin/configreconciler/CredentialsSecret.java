@@ -1,6 +1,5 @@
 package ch.derlin.configreconciler;
 
-import ch.derlin.configreconciler.Base64Util;
 import io.fabric8.kubernetes.api.model.Secret;
 import java.util.Map;
 import java.util.Optional;
