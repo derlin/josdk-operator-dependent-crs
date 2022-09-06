@@ -1,0 +1,4 @@
+# number of pods / CRs to generate
+num: 1
+configName: default-config
+configNamespace: null

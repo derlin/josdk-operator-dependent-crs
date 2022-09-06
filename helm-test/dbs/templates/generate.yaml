@@ -1,0 +1,12 @@
+{{- range $i, $e := until (int .Values.num) -}}
+{{- $name := printf "%s-%d" $.Release.Name $i -}}
+apiVersion: example.derlin.ch/v1
+kind: Db
+metadata:
+  name: {{ $name }}
+spec:
+  configRef:
+    namespace: {{ $.Values.configNamespace | default $.Release.Namespace }}
+    name: {{ $.Values.configName }}
+---
+{{ end -}}

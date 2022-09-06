@@ -1,0 +1,24 @@
+{{- range $i, $e := until (int .Values.num) -}}
+{{- $name := printf "%s-%d" $.Release.Name $i -}}
+apiVersion: example.derlin.ch/v1
+kind: Config
+metadata:
+  name: {{ $name }}
+spec:
+  host: {{ $.Values.host }}
+  rootDbName: {{ $.Values.rootDbName }}
+  credentialsSecretRef:
+    namespace: {{ $.Values.secretNamespace | default $.Release.Namespace }}
+    name: {{ if $.Values.withSecret }}{{ $name }}{{ else }}{{ $.Values.secretName }}{{ end }}
+---
+{{ if $.Values.withSecret }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ $name }}
+data:
+  username: {{ $.Values.username | b64enc }}
+  password: {{ $.Values.password | b64enc }}
+---
+{{ end }}
+{{- end -}}

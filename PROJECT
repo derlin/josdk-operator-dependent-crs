@@ -1,0 +1,20 @@
+domain: derlin.ch
+layout:
+- quarkus.javaoperatorsdk.io/v1-alpha
+projectName: config-cr-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: derlin.ch
+  group: example
+  kind: Config
+  version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: derlin.ch
+  group: example
+  kind: Db
+  version: v1
+version: "3"

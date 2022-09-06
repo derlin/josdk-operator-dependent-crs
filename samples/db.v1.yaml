@@ -1,0 +1,8 @@
+apiVersion: example.derlin.ch/v1
+kind: Db
+metadata:
+  name: example-db
+spec:
+  configRef:
+    namespace: ll-extdb # TODO: CHANGE ME
+    name: default-config

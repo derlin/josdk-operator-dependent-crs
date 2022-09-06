@@ -1,0 +1,10 @@
+apiVersion: example.derlin.ch/v1
+kind: Config
+metadata:
+  name: default-config
+spec:
+  host: some-host
+  rootDbName: postgres
+  credentialsSecretRef:
+    namespace: ll-extdb # TODO: CHANGE ME
+    name: credentials-secret
