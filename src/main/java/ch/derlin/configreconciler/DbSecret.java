@@ -8,8 +8,6 @@ import io.fabric8.kubernetes.api.model.SecretBuilder;
 import io.javaoperatorsdk.operator.api.reconciler.Context;
 import io.javaoperatorsdk.operator.processing.dependent.Matcher.Result;
 import io.javaoperatorsdk.operator.processing.dependent.kubernetes.CRUDKubernetesDependentResource;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependent;
-import io.javaoperatorsdk.operator.processing.dependent.kubernetes.KubernetesDependentResourceConfig;
 import io.javaoperatorsdk.operator.processing.event.ResourceID;
 import io.javaoperatorsdk.operator.processing.event.source.SecondaryToPrimaryMapper;
 import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
@@ -22,11 +20,9 @@ import lombok.extern.slf4j.Slf4j;
 
 import static ch.derlin.configreconciler.Base64Util.decodeBase64;
 import static ch.derlin.configreconciler.Base64Util.encodeMap;
-import static ch.derlin.configreconciler.DbSecret.DB_SECRET_LABEL;
 
 
 @Slf4j
-@KubernetesDependent(labelSelector = DB_SECRET_LABEL)
 public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implements SecondaryToPrimaryMapper<Secret> {
 
   public static final String DB_SECRET_LABEL = "app.kubernetes.io/managed-by=external-dbs-operator";
@@ -38,12 +34,6 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
 
   public DbSecret() {
     super(Secret.class);
-  }
-
-  @Override
-  public void configureWith(KubernetesDependentResourceConfig config) {
-
-    super.configureWith(config);
   }
 
   @Override
