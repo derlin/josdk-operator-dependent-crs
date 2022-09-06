@@ -20,15 +20,15 @@ import io.javaoperatorsdk.operator.api.reconciler.UpdateControl;
 import io.javaoperatorsdk.operator.processing.event.ResourceID;
 import io.javaoperatorsdk.operator.processing.event.source.EventSource;
 import io.javaoperatorsdk.operator.processing.event.source.informer.InformerEventSource;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.validation.ValidationException;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-
-import static ch.derlin.configreconciler.DependentConfig.CONFIG_RELATION_INDEXER;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -37,9 +37,8 @@ public class DbReconciler implements Reconciler<Db>,
     ErrorStatusHandler<Db>,
     EventSourceInitializer<Db> {
 
+  private static final String CONFIG_RELATION_INDEXER = "db_config_indexer";
   final DbSecret dbSecret = new DbSecret();
-
-  final DependentConfig dependentConfig = new DependentConfig();
   final KubernetesClient kubernetesClient;
 
 
@@ -127,18 +126,18 @@ public class DbReconciler implements Reconciler<Db>,
   @Override
   public Map<String, EventSource> prepareEventSources(EventSourceContext<Db> context) {
     dbSecret.setKubernetesClient(kubernetesClient); // if not set, a NullPointerException is thrown during reconcile
-    dependentConfig.setKubernetesClient(kubernetesClient);
 
-    context.getPrimaryCache().addIndexer(CONFIG_RELATION_INDEXER, DependentConfig.indexer);
+    context.getPrimaryCache().addIndexer(CONFIG_RELATION_INDEXER, db -> List.of(indexKey(db)));
 
     var informerForConfigs =
         InformerConfiguration.from(Config.class)
+            .withPrimaryToSecondaryMapper((Db db) -> Set.of(new ResourceID(
+                db.getSpec().getConfigRef().getName(),
+                db.getSpec().getConfigRef().getNamespace())))
             .withSecondaryToPrimaryMapper(
-                (Config secondaryResource) -> context
+                (Config config) -> context
                     .getPrimaryCache()
-                    .byIndex(
-                        CONFIG_RELATION_INDEXER,
-                        secondaryResource.getMetadata().getNamespace() + "#" + secondaryResource.getMetadata().getName())
+                    .byIndex(CONFIG_RELATION_INDEXER, indexKey(config))
                     .stream()
                     .map(ResourceID::fromResource)
                     .collect(Collectors.toSet()))
@@ -146,5 +145,13 @@ public class DbReconciler implements Reconciler<Db>,
 
     return EventSourceInitializer.nameEventSources(
         new InformerEventSource<>(informerForConfigs, context), dbSecret.initEventSource(context));
+  }
+
+  private String indexKey(Config config) {
+    return config.getMetadata().getNamespace() + "#" + config.getMetadata().getName();
+  }
+
+  private String indexKey(Db db) {
+    return db.getSpec().getConfigRef().getNamespace() + "#" + db.getSpec().getConfigRef().getName();
   }
 }
