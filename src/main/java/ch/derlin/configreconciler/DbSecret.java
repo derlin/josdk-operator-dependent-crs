@@ -1,7 +1,6 @@
 package ch.derlin.configreconciler;
 
-import ch.derlin.configreconciler.ConfigCacher;
-import ch.derlin.configreconciler.DbInfo;
+import ch.derlin.configreconciler.crds.config.Config;
 import ch.derlin.configreconciler.crds.db.Db;
 import io.fabric8.kubernetes.api.model.ObjectMetaBuilder;
 import io.fabric8.kubernetes.api.model.Secret;
@@ -16,7 +15,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import javax.validation.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 
 import static ch.derlin.configreconciler.Base64Util.decodeBase64;
@@ -24,7 +23,6 @@ import static ch.derlin.configreconciler.Base64Util.encodeMap;
 
 
 @Slf4j
-@ApplicationScoped
 public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implements SecondaryToPrimaryMapper<Secret> {
 
   public static final String DB_NAME = "DB_NAME";
@@ -33,9 +31,6 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
   public static final String DB_PASSWORD = "DB_PASSWORD";
   public static final String SECRET_SUFFIX = "-db";
 
-  @Inject
-  ConfigCacher configCacher;
-
   public DbSecret() {
     super(Secret.class);
   }
@@ -43,14 +38,14 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
   @Override
   protected Secret desired(Db db, Context<Db> context) {
     log.info("Creating secret");
-    return createSecret(db, getExpectedDbInfo(db));
+    return createSecret(db, getExpectedDbInfo(db, context));
   }
 
   @Override
   public Result<Secret> match(Secret actualResource, Db db, Context<Db> context) {
     log.debug("Matching secret...");
     var actualDbInfo = dbInfoFromSecretData(actualResource.getData());
-    var desiredDbInfo = getExpectedDbInfo(db);
+    var desiredDbInfo = getExpectedDbInfo(db, context);
     var equals = !actualDbInfo.getPassword().isBlank() && actualDbInfo.equals(desiredDbInfo);
 
     if (equals) {
@@ -69,8 +64,10 @@ public class DbSecret extends CRUDKubernetesDependentResource<Secret, Db> implem
     return Result.computed(false, createSecret(db, desiredDbInfo));
   }
 
-  private DbInfo getExpectedDbInfo(Db db) {
-    var spec = configCacher.getOrThrow(db.getSpec().getConfigRef()).getSpec();
+  private DbInfo getExpectedDbInfo(Db db, Context<Db> context) {
+    var spec = context.getSecondaryResource(Config.class)
+        .orElseThrow(() -> new ValidationException("Could not find config in dependent secret"))
+        .getSpec();
     var dbPrefix = Optional.ofNullable(spec.getDbPrefix()).orElse(db.getMetadata().getNamespace());
     var dbName = (dbPrefix + "_" + db.getMetadata().getName()).replaceAll("\\W", "_");
 
