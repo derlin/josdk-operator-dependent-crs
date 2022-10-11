@@ -16,8 +16,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
-    <quarkus-sdk.version>4.0.0</quarkus-sdk.version>
-    <quarkus.version>2.11.2.Final</quarkus.version>
+    <quarkus-sdk.version>4.0.1</quarkus-sdk.version>
 
     <lombok.version>1.18.24</lombok.version>
   </properties>
@@ -42,7 +41,6 @@
     <dependency>
       <groupId>io.quarkus</groupId>
       <artifactId>quarkus-micrometer-registry-prometheus</artifactId>
-      <version>${quarkus.version}</version>
     </dependency>
 
     <dependency>
@@ -66,6 +64,16 @@
       <artifactId>lombok</artifactId>
       <version>${lombok.version}</version>
     </dependency>
+
+    <dependency>
+      <!-- Support for EC Keys. Needed when using e.g. k3d -->
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcprov-jdk15on</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk15on</artifactId>
+    </dependency>
   </dependencies>
 
   <build>
@@ -73,7 +81,6 @@
       <plugin>
         <groupId>io.quarkus</groupId>
         <artifactId>quarkus-maven-plugin</artifactId>
-        <version>${quarkus.version}</version>
         <executions>
           <execution>
             <goals>

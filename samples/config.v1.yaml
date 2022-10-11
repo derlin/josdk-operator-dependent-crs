@@ -5,6 +5,3 @@ metadata:
 spec:
   host: some-host
   rootDbName: postgres
-  credentialsSecretRef:
-    namespace: ll-extdb # TODO: CHANGE ME
-    name: credentials-secret

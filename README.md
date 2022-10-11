@@ -2,7 +2,11 @@
 
 This is a reproducible example of https://github.com/java-operator-sdk/java-operator-sdk/issues/1437.
 
-Check the branches, as there may be multiple tests / proposed implementations.
+Check the branches, as there may be multiple tests / proposed implementations:
+* `config-cacher` branch: first try, using two reconcilers (one for config and one for db). The config is put in an application
+  cache. Problem: the cache is not always up-to-date, as db can be reconciled before configs.
+* `primary-indexer`: a test based on the primary-indexer examples on JOSDK, but this doesn't work.
+* `main`: previously called `primary-to-secondary`, the implementation that is for now working the best.
 
 Comments may be added as issues to this repo.
 
