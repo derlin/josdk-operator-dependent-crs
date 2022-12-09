@@ -49,7 +49,7 @@ public class DbReconciler implements Reconciler<Db>,
     this.kubernetesClient = kubernetesClient;
     dbSecret.setKubernetesClient(kubernetesClient); // if not set, a NullPointerException is thrown during reconcile
     // The label is to avoid watching *ALL* secrets, which would be a lot of processing for nothing...
-    dbSecret.configureWith(new KubernetesDependentResourceConfig<>().setLabelSelector(DbSecret.DB_SECRET_LABEL));
+    dbSecret.configureWith(new KubernetesDependentResourceConfig<Secret>().setLabelSelector(DbSecret.DB_SECRET_LABEL));
   }
 
   @Override
@@ -149,11 +149,13 @@ public class DbReconciler implements Reconciler<Db>,
 
   @Override
   public Map<String, EventSource> prepareEventSources(EventSourceContext<Db> context) {
-    return Map.of(
+    Map<String, EventSource> eventSources = Map.of(
         CONFIG_INFORMER, createInformer(context, Config.class, CONFIG_INFORMER),
         CREDENTIALS_SECRET_INFORMER, createInformer(context, Secret.class, CREDENTIALS_SECRET_INFORMER, CREDENTIALS_SECRET_LABEL),
         DB_SECRET_INFORMER, dbSecret.initEventSource(context)
     );
+    dbSecret.useEventSourceWithName(DB_SECRET_INFORMER);
+    return eventSources;
   }
 
   private <T extends HasMetadata> InformerEventSource<T, Db> createInformer(EventSourceContext<Db> context,
