@@ -37,19 +37,23 @@ public class DbReconciler implements Reconciler<Db>,
     ErrorStatusHandler<Db>,
     EventSourceInitializer<Db> {
 
-  private static final String CONFIG_INFORMER = "dependent_config";
-  private static final String CREDENTIALS_SECRET_INFORMER = "dependent_credentials_secret";
-  private static final String DB_SECRET_INFORMER = "dependent_db_secret";
+  static final String CONFIG_INFORMER = "dependent_config";
+  static final String CREDENTIALS_SECRET_INFORMER = "dependent_credentials_secret";
+  static final String DB_SECRET_INFORMER = "dependent_db_secret";
 
   private static final String CREDENTIALS_SECRET_LABEL = "kubernetes.io/used-by=external-db-operator";
   final DbSecret dbSecret = new DbSecret();
   final KubernetesClient kubernetesClient;
+
+  final CredentialsSecretDiscriminator credentialsSecretDiscriminator = new CredentialsSecretDiscriminator();
+  final DbSecretDiscriminator dbSecretDiscriminator = new DbSecretDiscriminator();
 
   public DbReconciler(KubernetesClient kubernetesClient) {
     this.kubernetesClient = kubernetesClient;
     dbSecret.setKubernetesClient(kubernetesClient); // if not set, a NullPointerException is thrown during reconcile
     // The label is to avoid watching *ALL* secrets, which would be a lot of processing for nothing...
     dbSecret.configureWith(new KubernetesDependentResourceConfig<Secret>().setLabelSelector(DbSecret.DB_SECRET_LABEL));
+    dbSecret.setResourceDiscriminator(dbSecretDiscriminator);
   }
 
   @Override
@@ -63,7 +67,7 @@ public class DbReconciler implements Reconciler<Db>,
     // to avoid watching all secrets, which is resource intensive.
     var config = context.getSecondaryResource(Config.class).orElseThrow(() ->
         new ValidationException("Missing config"));
-    var credentialsSecret = context.getSecondaryResource(Secret.class, CREDENTIALS_SECRET_INFORMER).orElseThrow(() ->
+    var credentialsSecret = context.getSecondaryResource(Secret.class, credentialsSecretDiscriminator).orElseThrow(() ->
         new ValidationException("Missing credentials secret"));
     var rootDbInfo = DbInfo.builder()
         .dbName(config.getSpec().getRootDbName())
@@ -75,7 +79,7 @@ public class DbReconciler implements Reconciler<Db>,
     log.debug("root db info: {}", rootDbInfo);
 
     dbSecret.reconcile(resource, context);
-    var secret = context.getSecondaryResource(Secret.class, DB_SECRET_INFORMER).orElseThrow();
+    var secret = context.getSecondaryResource(Secret.class, dbSecretDiscriminator).orElseThrow();
     var dbInfo = DbSecret.dbInfoFromSecretData(secret.getData());
     log.debug("secret db info: {}", dbInfo);
 
@@ -154,7 +158,6 @@ public class DbReconciler implements Reconciler<Db>,
         CREDENTIALS_SECRET_INFORMER, createInformer(context, Secret.class, CREDENTIALS_SECRET_INFORMER, CREDENTIALS_SECRET_LABEL),
         DB_SECRET_INFORMER, dbSecret.initEventSource(context)
     );
-    dbSecret.useEventSourceWithName(DB_SECRET_INFORMER);
     return eventSources;
   }
 
